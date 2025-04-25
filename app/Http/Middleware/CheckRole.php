@@ -11,11 +11,16 @@ class CheckRole
      * Handle an incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
+     * @param  \Closure  $next
+     * @param  string|array  ...$roles
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next, ...$roles)
     {
+        if (!$request->user() || !$request->user()->hasAnyRole($roles)) {
+            abort(403, 'Unauthorized action.');
+        }
+
         return $next($request);
     }
 }

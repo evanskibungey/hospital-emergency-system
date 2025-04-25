@@ -8,23 +8,26 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('medications', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->string('dosage_form'); // tablet, liquid, injection, etc.
+            $table->string('strength'); // 500mg, 10ml, etc.
+            $table->string('unit')->nullable(); // mg, ml, etc.
+            $table->text('instructions')->nullable();
+            $table->boolean('is_controlled_substance')->default(false);
             $table->timestamps();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('medications');
     }

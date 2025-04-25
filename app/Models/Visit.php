@@ -17,17 +17,18 @@ class Visit extends Model
     protected $fillable = [
         'patient_id',
         'chief_complaint',
+        'status',
+        'is_critical',
         'priority',
         'department',
-        'status',
         'check_in_time',
         'check_out_time',
-        'notes',
-        'initial_assessment',
-        'estimated_wait_time',
-        'registered_by',
+        'discharged_at',
         'assigned_to',
-        'bed_number',
+        'doctor_id',
+        'bed_id',
+        'bed_assigned_at',
+        'notes',
     ];
 
     /**
@@ -38,6 +39,9 @@ class Visit extends Model
     protected $casts = [
         'check_in_time' => 'datetime',
         'check_out_time' => 'datetime',
+        'discharged_at' => 'datetime',
+        'bed_assigned_at' => 'datetime',
+        'is_critical' => 'boolean',
     ];
 
     /**
@@ -49,39 +53,7 @@ class Visit extends Model
     }
 
     /**
-     * Get the vital signs for this visit.
-     */
-    public function vitalSigns()
-    {
-        return $this->hasMany(VitalSign::class);
-    }
-
-    /**
-     * Get the latest vital signs for this visit.
-     */
-    public function latestVitalSigns()
-    {
-        return $this->hasOne(VitalSign::class)->latest();
-    }
-
-    /**
-     * Get the visitors associated with this visit.
-     */
-    public function visitors()
-    {
-        return $this->hasMany(Visitor::class);
-    }
-
-    /**
-     * Get the user who registered this visit.
-     */
-    public function registeredBy()
-    {
-        return $this->belongsTo(User::class, 'registered_by');
-    }
-
-    /**
-     * Get the nurse assigned to this visit.
+     * Get the user (staff) that is assigned to this visit.
      */
     public function assignedTo()
     {
@@ -89,65 +61,261 @@ class Visit extends Model
     }
 
     /**
-     * Check if the visit is active.
+     * Get the doctor assigned to this visit.
+     */
+    public function doctor()
+    {
+        return $this->belongsTo(User::class, 'doctor_id');
+    }
+
+    /**
+     * Get the bed assigned to this visit.
+     */
+    public function bed()
+    {
+        return $this->belongsTo(Bed::class);
+    }
+
+    /**
+     * Get all vital signs for this visit.
+     */
+    public function vitalSigns()
+    {
+        return $this->hasMany(VitalSign::class);
+    }
+
+    /**
+     * Get the most recent vital signs for this visit.
+     */
+    public function latestVitalSigns()
+    {
+        return $this->hasOne(VitalSign::class)->latest();
+    }
+
+    /**
+     * Get all medication schedules for this visit.
+     */
+    public function medicationSchedules()
+    {
+        return $this->hasMany(MedicationSchedule::class);
+    }
+
+    /**
+     * Get all consultation requests for this visit.
+     */
+    public function consultationRequests()
+    {
+        return $this->hasMany(ConsultationRequest::class);
+    }
+
+    /**
+     * Get doctor tasks associated with this visit.
+     */
+    public function doctorTasks()
+    {
+        return $this->hasMany(DoctorTask::class);
+    }
+
+    /**
+     * Get treatments associated with this visit.
+     */
+    public function treatments()
+    {
+        return $this->hasMany(Treatment::class);
+    }
+
+    /**
+     * Get the medical notes associated with this visit.
+     */
+    public function medicalNotes()
+    {
+        return $this->hasMany(MedicalNote::class);
+    }
+
+    /**
+     * Get lab orders associated with this visit.
+     */
+    public function labOrders()
+    {
+        return $this->hasMany(LabOrder::class);
+    }
+
+    /**
+     * Get imaging orders associated with this visit.
+     */
+    public function imagingOrders()
+    {
+        return $this->hasMany(ImagingOrder::class);
+    }
+
+    /**
+     * Get prescriptions associated with this visit.
+     */
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    /**
+     * Get the discharge record associated with this visit.
+     */
+    public function discharge()
+    {
+        return $this->hasOne(Discharge::class);
+    }
+
+    /**
+     * Get follow-up appointments associated with this visit.
+     */
+    public function followUpAppointments()
+    {
+        return $this->hasMany(FollowUpAppointment::class);
+    }
+
+    /**
+     * Get scheduled medications that need to be administered.
+     */
+    public function dueAndOverdueMedications()
+    {
+        return $this->medicationSchedules()
+                    ->where('status', 'scheduled')
+                    ->where('scheduled_time', '<=', now())
+                    ->orderBy('scheduled_time', 'asc');
+    }
+
+    /**
+     * Get all medication administrations for this visit through schedules.
+     */
+    public function medicationAdministrations()
+    {
+        return $this->hasManyThrough(
+            MedicationAdministration::class, 
+            MedicationSchedule::class
+        );
+    }
+
+    /**
+     * Scope a query to only include active visits.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['waiting', 'in_progress']);
+    }
+
+    /**
+     * Scope a query to only include in-progress visits.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInProgress($query)
+    {
+        return $query->where('status', 'in_progress');
+    }
+
+    /**
+     * Scope a query to only include waiting visits.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWaiting($query)
+    {
+        return $query->where('status', 'waiting');
+    }
+
+    /**
+     * Scope a query to only include discharged visits.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeDischarged($query)
+    {
+        return $query->where('status', 'discharged')
+                     ->whereNotNull('discharged_at');
+    }
+
+    /**
+     * Scope a query to only include non-discharged visits.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeNotDischarged($query)
+    {
+        return $query->where(function($q) {
+            $q->where('status', '!=', 'discharged')
+              ->orWhereNull('discharged_at');
+        });
+    }
+
+    /**
+     * Scope a query to only include visits assigned to a specific user.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $userId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeAssignedTo($query, $userId)
+    {
+        return $query->where('assigned_to', $userId);
+    }
+
+    /**
+     * Scope a query to only include visits assigned to a specific doctor.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $doctorId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeAssignedToDoctor($query, $doctorId)
+    {
+        return $query->where('doctor_id', $doctorId);
+    }
+
+    /**
+     * Scope a query to only include critical visits.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeCritical($query)
+    {
+        return $query->where('is_critical', true);
+    }
+
+    /**
+     * Check if the visit has any active treatments.
      *
      * @return bool
      */
-    public function isActive()
+    public function hasActiveTreatments()
     {
-        return $this->status === 'active';
+        return $this->treatments()->where('status', 'active')->exists();
     }
 
     /**
-     * Check if the visit is waiting.
+     * Check if the visit is ready for discharge.
      *
      * @return bool
      */
-    public function isWaiting()
+    public function isReadyForDischarge()
     {
-        return $this->status === 'waiting';
-    }
+        // Check if already discharged
+        if ($this->status === 'discharged' || $this->discharged_at !== null) {
+            return false;
+        }
 
-    /**
-     * Assign the visit to a nurse.
-     *
-     * @param int $nurseId
-     * @return void
-     */
-    public function assignToNurse($nurseId)
-    {
-        $this->status = 'active';
-        $this->assigned_to = $nurseId;
-        $this->save();
-    }
+        // Must have at least one treatment that is completed or no treatments at all
+        $hasTreatments = $this->treatments()->exists();
+        $hasCompletedTreatments = $this->treatments()->where('status', 'completed')->exists();
+        $hasActiveTreatments = $this->treatments()->where('status', 'active')->exists();
 
-    /**
-     * Mark the visit as completed.
-     *
-     * @return void
-     */
-    public function complete()
-    {
-        $this->status = 'completed';
-        $this->check_out_time = now();
-        $this->save();
-    }
-
-    /**
-     * Get the estimated wait time in minutes.
-     *
-     * @return int
-     */
-    public function getEstimatedWaitTime()
-    {
-        // Simple wait time calculation based on priority
-        $waitTimes = [
-            'low' => 120,     // 2 hours
-            'medium' => 60,   // 1 hour
-            'high' => 30,     // 30 minutes
-            'critical' => 0   // Immediate
-        ];
-
-        return $waitTimes[$this->priority] ?? 60;
+        // Ready if: no treatments OR has completed treatments AND no active treatments
+        return !$hasTreatments || ($hasCompletedTreatments && !$hasActiveTreatments);
     }
 }

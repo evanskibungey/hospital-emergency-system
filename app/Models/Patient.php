@@ -69,7 +69,7 @@ class Patient extends Model
      */
     public function activeVisits()
     {
-        return $this->visits()->where('status', 'active');
+        return $this->visits()->whereIn('status', ['waiting', 'in_progress']);
     }
 
     /**
@@ -86,5 +86,111 @@ class Patient extends Model
     public function latestVitalSigns()
     {
         return $this->vitalSigns()->latest()->first();
+    }
+
+    /**
+     * Get all treatments for this patient through visits.
+     */
+    public function treatments()
+    {
+        return $this->hasManyThrough(Treatment::class, Visit::class);
+    }
+
+    /**
+     * Get all medical notes for this patient through visits.
+     */
+    public function medicalNotes()
+    {
+        return $this->hasManyThrough(MedicalNote::class, Visit::class);
+    }
+
+    /**
+     * Get all lab orders for this patient through visits.
+     */
+    public function labOrders()
+    {
+        return $this->hasManyThrough(LabOrder::class, Visit::class);
+    }
+
+    /**
+     * Get all imaging orders for this patient through visits.
+     */
+    public function imagingOrders()
+    {
+        return $this->hasManyThrough(ImagingOrder::class, Visit::class);
+    }
+
+    /**
+     * Get all prescriptions for this patient.
+     */
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    /**
+     * Get active prescriptions for this patient.
+     */
+    public function activePrescriptions()
+    {
+        return $this->prescriptions()
+                    ->where('status', 'active')
+                    ->where(function($query) {
+                        $query->whereNull('end_date')
+                              ->orWhere('end_date', '>=', now());
+                    });
+    }
+
+    /**
+     * Get all discharges for this patient.
+     */
+    public function discharges()
+    {
+        return $this->hasMany(Discharge::class);
+    }
+
+    /**
+     * Get all follow-up appointments for this patient.
+     */
+    public function followUpAppointments()
+    {
+        return $this->hasMany(FollowUpAppointment::class);
+    }
+
+    /**
+     * Get upcoming follow-up appointments for this patient.
+     */
+    public function upcomingAppointments()
+    {
+        return $this->followUpAppointments()
+                    ->whereIn('status', ['scheduled', 'confirmed'])
+                    ->where('appointment_time', '>=', now())
+                    ->orderBy('appointment_time');
+    }
+
+    /**
+     * Get the patient's age.
+     *
+     * @return int
+     */
+    public function getAgeAttribute()
+    {
+        return $this->date_of_birth->age;
+    }
+
+    /**
+     * Scope a query to search patients by name or medical record number.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $search
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function($q) use ($search) {
+            $q->where('first_name', 'like', "%{$search}%")
+              ->orWhere('last_name', 'like', "%{$search}%")
+              ->orWhere('medical_record_number', 'like', "%{$search}%");
+        });
     }
 }

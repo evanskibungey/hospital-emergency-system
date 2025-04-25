@@ -39,33 +39,59 @@ class UserSeeder extends Seeder
             ]
         );
 
+        $doctorRole = Role::firstOrCreate(
+            ['slug' => 'doctor'],
+            [
+                'name' => 'Doctor',
+                'description' => 'Medical doctors responsible for patient diagnosis, treatment, and care plans.'
+            ]
+        );
+
         // Create admin user
-        $adminUser = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@hospital.com',
-            'password' => 'password', // Will be hashed by the model mutator
-            'email_verified_at' => now(),
-        ]);
+        $adminUser = User::updateOrCreate(
+            ['email' => 'admin@hospital.com'],
+            [
+                'name' => 'Admin User',
+                'password' => 'password', // Will be hashed by the model mutator
+                'email_verified_at' => now(),
+            ]
+        );
 
         // Create reception user
-        $receptionUser = User::create([
-            'name' => 'Reception Staff',
-            'email' => 'reception@hospital.com',
-            'password' => 'password', // Will be hashed by the model mutator
-            'email_verified_at' => now(),
-        ]);
+        $receptionUser = User::updateOrCreate(
+            ['email' => 'reception@hospital.com'],
+            [
+                'name' => 'Reception Staff',
+                'password' => 'password', // Will be hashed by the model mutator
+                'email_verified_at' => now(),
+            ]
+        );
 
         // Create nurse user
-        $nurseUser = User::create([
-            'name' => 'Nurse Staff',
-            'email' => 'nurse@hospital.com',
-            'password' => 'password', // Will be hashed by the model mutator
-            'email_verified_at' => now(),
-        ]);
+        $nurseUser = User::updateOrCreate(
+            ['email' => 'nurse@hospital.com'],
+            [
+                'name' => 'Nurse Staff',
+                'password' => 'password', // Will be hashed by the model mutator
+                'email_verified_at' => now(),
+            ]
+        );
 
-        // Assign roles
-        $adminUser->roles()->attach($adminRole);
-        $receptionUser->roles()->attach($receptionRole);
-        $nurseUser->roles()->attach($nurseRole);
+        // Create doctor user
+        $doctorUser = User::updateOrCreate(
+            ['email' => 'doctor@hospital.com'],
+            [
+                'name' => 'Dr. John Smith',
+                'password' => 'password', // Will be hashed by the model mutator
+                'email_verified_at' => now(),
+                'is_on_call' => true,
+            ]
+        );
+
+        // Assign roles (sync prevents duplicates)
+        $adminUser->roles()->sync([$adminRole->id]);
+        $receptionUser->roles()->sync([$receptionRole->id]);
+        $nurseUser->roles()->sync([$nurseRole->id]);
+        $doctorUser->roles()->sync([$doctorRole->id]);
     }
 }

@@ -1,0 +1,4 @@
+Hostname:localhost
+Database:hitishac_hostpitaldb
+Username:hitishac_hostpitaldb
+Password:cWW69vxb737JrmXeTSQG

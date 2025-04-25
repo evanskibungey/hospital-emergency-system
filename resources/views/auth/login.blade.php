@@ -2,6 +2,11 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    <div class="mb-6 text-center">
+        <h2 class="text-xl font-semibold text-gray-800">Hospital Emergency Management System</h2>
+        <p class="text-sm text-gray-600 mt-1">Enter your credentials to access the system</p>
+    </div>
+
     <form method="POST" action="{{ route('login') }}">
         @csrf
 
@@ -44,4 +49,38 @@
             </x-primary-button>
         </div>
     </form>
+
+    <div class="mt-6 text-center">
+        <a href="/" class="text-sm text-indigo-600 hover:text-indigo-900">← Return to role selection</a>
+    </div>
+
+    <script>
+        // Auto-fill email field based on the selected role from the welcome page
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectedRole = localStorage.getItem('selectedRole');
+            if (selectedRole) {
+                const emailField = document.getElementById('email');
+                
+                switch(selectedRole) {
+                    case 'admin':
+                        emailField.value = 'admin@hospital.com';
+                        break;
+                    case 'reception':
+                        emailField.value = 'reception@hospital.com';
+                        break;
+                    case 'nurse':
+                        emailField.value = 'nurse@hospital.com';
+                        break;
+                    case 'doctor':
+                        emailField.value = 'doctor@hospital.com';
+                        break;
+                }
+                
+                // Focus on password field since email is prefilled
+                if (emailField.value) {
+                    document.getElementById('password').focus();
+                }
+            }
+        });
+    </script>
 </x-guest-layout>

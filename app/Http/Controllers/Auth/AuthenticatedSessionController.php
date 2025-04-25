@@ -29,6 +29,21 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Get authenticated user
+        $user = Auth::user();
+        
+        // Redirect based on user role
+        if ($user->hasRole('admin')) {
+            return redirect()->route('dashboard'); // Default admin dashboard
+        } elseif ($user->hasRole('reception')) {
+            return redirect()->route('reception.dashboard');
+        } elseif ($user->hasRole('nurse')) {
+            return redirect()->route('nurse.dashboard');
+        } elseif ($user->hasRole('doctor')) {
+            return redirect()->route('doctor.dashboard');
+        }
+        
+        // Fallback to default home
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 
